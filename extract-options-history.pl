@@ -7,10 +7,25 @@ use warnings;
 use Git::Sub;
 use Text::Diff;
 
+# 'ssh' or 'sshd'
+my $side = shift // 'ssh';
+
 chdir 'openssh';
 
-# The first commit where ssh_config.5 appeared
-my $first_commit = '479b476af623835b551ace88463665e6be7c8873';
+# Hard coded commit where the file appears in a way we are able to parse
+# Basically: git --pretty=oneline $file | sed -n '$s/ .*$//p'
+# Patch welcome to avoid this!
+my %files = (
+    ssh  => [ 'ssh_config.5'  => '479b476af623835b551ace88463665e6be7c8873' ],
+    sshd => [ 'sshd_config.5' => '9f04903c50089acde55ef3ea7edd35161c5eac0c' ],
+);
+
+die "usage: $0 <ssh|sshd>" unless exists $files{$side};
+
+my $file = $files{$side}[0];
+
+# The first commit where $file appeared
+my $first_commit = $files{$side}[1];
 
 my @tags = git::tag '--contain' => $first_commit, -l => 'V_*';
 
@@ -28,7 +43,7 @@ my %tags =
 #say for @tags;
 
 foreach my $v (keys %tags) {
-    my $line = git::ls_tree $v, 'ssh_config.5';
+    my $line = git::ls_tree $v, $file;
     #say $v, ' ', $line;
     my $obj = ($line =~ /^\d+ \S+ (\S+)/)[0];
     my @opts;
